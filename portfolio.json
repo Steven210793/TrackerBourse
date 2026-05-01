@@ -1,1 +1,58 @@
-[]
+[
+  {
+    "name": "Bitcoin",
+    "ticker": "BTC",
+    "buyPrice": 74261.72,
+    "objectif": 148523.44,
+    "qty": 0.009337
+  },
+  {
+    "name": "Assystem",
+    "ticker": "ASY",
+    "buyPrice": 45.18,
+    "objectif": 90.36,
+    "qty": 2
+  },
+  {
+    "name": "Air Liquide",
+    "ticker": "AL",
+    "buyPrice": 159.21,
+    "objectif": 318.42,
+    "qty": 1
+  },
+  {
+    "name": "Topgolf Callaway Brands",
+    "ticker": "MODG",
+    "buyPrice": 6.2,
+    "objectif": 12.4,
+    "qty": 2.643889
+  },
+  {
+    "name": "Equinix",
+    "ticker": "EQIX",
+    "buyPrice": 835.27,
+    "objectif": 1670.54,
+    "qty": 0.191554
+  },
+  {
+    "name": "Acushnet",
+    "ticker": "GOLF",
+    "buyPrice": 73.5,
+    "objectif": 147,
+    "qty": 2.721088
+  },
+  {
+    "name": "Microsoft",
+    "ticker": "MSFT",
+    "buyPrice": 343.13,
+    "objectif": 686.26,
+    "qty": 0.728676
+  },
+  {
+    "name": "Nvidia",
+    "ticker": "NVDA",
+    "buyPrice": 149.71,
+    "objectif": 299.42,
+    "qty": 1.614763
+  }
+]
