@@ -1,0 +1,22 @@
+name: Vérification Prix Bourse
+on:
+  schedule:
+    - cron: '0 9 * * 1-5'
+    - cron: '0 15 * * 1-5'
+  workflow_dispatch:
+jobs:
+  check-prices:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Récupérer le code
+        uses: actions/checkout@v4
+      - name: Installer Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Vérifier les prix et envoyer les alertes
+        env:
+          GMAIL_USER: ${{ secrets.GMAIL_USER }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          DEST_EMAIL: ${{ secrets.DEST_EMAIL }}
+        run: python check_prices.py
