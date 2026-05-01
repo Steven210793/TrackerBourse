@@ -1,164 +1,577 @@
-import os
-import json
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
-import urllib.request
+<!DOCTYPE html>
 
-# ── CONFIG ──
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>TRACKER — Suivi Portefeuille</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600;700&family=DM+Mono:wght@300;400;500&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="apple-touch-icon" href="https://raw.githubusercontent.com/Steven210793/TrackerBourse/main/IMG_0114.png">
+<link rel="icon" type="image/png" href="https://raw.githubusercontent.com/Steven210793/TrackerBourse/main/IMG_0114.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="TRACKER">
+<meta name="theme-color" content="#080c12">
+<style>
+  :root {
+    --bg: #080c12; --bg2: #0e1420; --bg3: #141c2a;
+    --card: #111827; --card-border: #1e2d42;
+    --gold: #c9952a; --gold2: #f0b429; --gold-dim: #7a5a18;
+    --green: #22c55e; --red: #ef4444; --orange: #f97316;
+    --text: #e8eaf0; --text-dim: #6b7a99; --text-mid: #9aa5be;
+    --radius: 16px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body { font-family: 'Outfit', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; overflow-x: hidden; }
+  body::before {
+    content: ''; position: fixed; inset: 0;
+    background: radial-gradient(ellipse 80% 50% at 50% -10%, rgba(201,149,42,0.07) 0%, transparent 60%),
+                radial-gradient(ellipse 40% 40% at 90% 90%, rgba(201,149,42,0.04) 0%, transparent 50%);
+    pointer-events: none; z-index: 0;
+  }
 
-GMAIL_USER = os.environ.get(“GMAIL_USER”)
-GMAIL_APP_PASSWORD = os.environ.get(“GMAIL_APP_PASSWORD”)
-DEST_EMAIL = os.environ.get(“DEST_EMAIL”)
-PORTFOLIO_FILE = “portfolio.json”
+header {
+position: sticky; top: 0; z-index: 100;
+background: rgba(8,12,18,0.92); backdrop-filter: blur(20px);
+border-bottom: 1px solid rgba(201,149,42,0.12);
+padding: 14px 20px; display: flex; align-items: center; justify-content: space-between;
+}
+.logo { display: flex; align-items: center; gap: 10px; }
+.logo-icon { width: 34px; height: 34px; border: 1.5px solid var(–gold); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+.logo-text { font-family: ‘Cormorant Garamond’, serif; font-size: 20px; font-weight: 700; letter-spacing: 3px; color: var(–gold2); }
+.logo-sub { font-size: 9px; letter-spacing: 2px; color: var(–text-dim); font-weight: 300; }
+.btn-add { width: 36px; height: 36px; border-radius: 50%; border: 1.5px solid var(–gold); background: transparent; color: var(–gold2); font-size: 22px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; line-height: 1; }
+.btn-add:hover { background: rgba(201,149,42,0.15); }
 
-def fetch_price(ticker):
-“”“Récupère le prix actuel via Yahoo Finance.”””
-url = f”https://query1.finance.yahoo.com/v8/finance/chart/{ticker}?interval=1d&range=1d”
-headers = {“User-Agent”: “Mozilla/5.0”}
-try:
-req = urllib.request.Request(url, headers=headers)
-with urllib.request.urlopen(req, timeout=10) as r:
-data = json.loads(r.read().decode())
-price = data[“chart”][“result”][0][“meta”][“regularMarketPrice”]
-return float(price)
-except Exception as e:
-print(f”  ⚠️  Erreur prix {ticker}: {e}”)
-return None
+.tabs { display: flex; padding: 16px 20px 0; gap: 4px; position: relative; z-index: 1; }
+.tab { flex: 1; padding: 8px; border: none; background: transparent; color: var(–text-dim); font-family: ‘Outfit’, sans-serif; font-size: 13px; font-weight: 500; cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.2s; letter-spacing: 0.5px; }
+.tab.active { color: var(–gold2); border-bottom-color: var(–gold2); }
 
-def send_email(alerts):
-“”“Envoie un email récapitulatif des alertes x2.”””
-if not GMAIL_USER or not GMAIL_APP_PASSWORD or not DEST_EMAIL:
-print(“⚠️  Variables email manquantes (GMAIL_USER, GMAIL_APP_PASSWORD, DEST_EMAIL)”)
-return
+.summary { margin: 16px 20px; padding: 12px 10px; background: var(–bg3); border: 1px solid var(–card-border); border-radius: var(–radius); display: flex; justify-content: space-between; align-items: center; position: relative; z-index: 1; }
+.summary-item { text-align: center; flex: 1; }
+.summary-label { font-size: 9px; letter-spacing: 1px; color: var(–text-dim); text-transform: uppercase; margin-bottom: 4px; }
+.summary-value { font-family: ‘DM Mono’, monospace; font-size: 13px; font-weight: 500; color: var(–text); }
+.summary-value.gold { color: var(–gold2); }
+.summary-value.green { color: var(–green); }
+.summary-value.red { color: var(–red); }
+.summary-divider { width: 1px; height: 30px; background: var(–card-border); }
 
-```
-subject = f"🚀 TRACKER — {len(alerts)} objectif(s) x2 atteint(s) !"
+.cards { padding: 0 20px 100px; display: flex; flex-direction: column; gap: 14px; position: relative; z-index: 1; }
 
-body_html = """
-<html><body style="font-family:Arial,sans-serif;background:#080c12;color:#e8eaf0;padding:20px;">
-<div style="max-width:500px;margin:auto;">
-  <h2 style="color:#f0b429;letter-spacing:2px;">📈 TRACKER BOURSE</h2>
-  <p style="color:#9aa5be;">Les positions suivantes ont atteint votre objectif x2 :</p>
-"""
+.card { background: var(–card); border: 1px solid var(–card-border); border-radius: var(–radius); padding: 16px; transition: all 0.3s; animation: slideUp 0.4s ease both; position: relative; overflow: hidden; }
+.card::before { content: ‘’; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, transparent, var(–gold), transparent); opacity: 0; transition: opacity 0.3s; }
+.card:hover::before { opacity: 1; }
+.card.grised { opacity: 0.45; filter: grayscale(80%); }
+.card.grised .card-status-badge { display: flex; }
+@keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
 
-for a in alerts:
-    pct = ((a['valeurActuelle'] - a['montantInvesti']) / a['montantInvesti']) * 100
-    gain = a['valeurActuelle'] - a['montantInvesti']
-    body_html += f"""
-  <div style="background:#111827;border:1px solid #1e2d42;border-radius:12px;padding:16px;margin:12px 0;border-left:3px solid #f0b429;">
-    <div style="font-size:18px;font-weight:bold;">{a['name']}</div>
-    <div style="color:#9aa5be;font-size:13px;margin-bottom:10px;">{a['ticker']}</div>
-    <div style="display:flex;justify-content:space-between;">
-      <div>
-        <div style="font-size:11px;color:#6b7a99;">INVESTI</div>
-        <div style="font-family:monospace;color:#e8eaf0;">{a['montantInvesti']:.2f} €</div>
-      </div>
-      <div>
-        <div style="font-size:11px;color:#6b7a99;">VALEUR ACTUELLE</div>
-        <div style="font-family:monospace;color:#22c55e;font-size:18px;">{a['valeurActuelle']:.2f} €</div>
-      </div>
-      <div>
-        <div style="font-size:11px;color:#6b7a99;">GAIN</div>
-        <div style="font-family:monospace;color:#f0b429;font-size:18px;">+{gain:.2f} €</div>
-      </div>
-      <div>
-        <div style="font-size:11px;color:#6b7a99;">PROGRESSION</div>
-        <div style="font-family:monospace;color:#f0b429;font-size:18px;">+{pct:.1f}%</div>
-      </div>
+.card-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 12px; }
+.card-left { display: flex; align-items: center; gap: 12px; }
+.ticker-badge { width: 44px; height: 44px; border-radius: 12px; background: linear-gradient(135deg, var(–bg3), var(–bg2)); border: 1px solid var(–card-border); display: flex; align-items: center; justify-content: center; font-family: ‘DM Mono’, monospace; font-size: 11px; font-weight: 500; color: var(–gold2); letter-spacing: 0.5px; text-align: center; padding: 2px; }
+.card-name { font-size: 15px; font-weight: 600; color: var(–text); margin-bottom: 2px; }
+.card-ticker { font-family: ‘DM Mono’, monospace; font-size: 11px; color: var(–text-dim); letter-spacing: 1px; }
+.card-right { text-align: right; }
+.card-valeur { font-family: ‘DM Mono’, monospace; font-size: 18px; font-weight: 500; color: var(–text); margin-bottom: 2px; }
+.card-change { font-family: ‘DM Mono’, monospace; font-size: 12px; }
+.card-change.up { color: var(–green); }
+.card-change.down { color: var(–red); }
+.card-change.neutral { color: var(–text-dim); }
+.gain-badge { display: inline-block; margin-top: 3px; padding: 2px 7px; border-radius: 20px; font-family: ‘DM Mono’, monospace; font-size: 11px; }
+.gain-badge.up { background: rgba(34,197,94,0.12); color: var(–green); border: 1px solid rgba(34,197,94,0.3); }
+.gain-badge.down { background: rgba(239,68,68,0.12); color: var(–red); border: 1px solid rgba(239,68,68,0.3); }
+.gain-badge.neutral { background: rgba(255,255,255,0.05); color: var(–text-dim); border: 1px solid var(–card-border); }
+
+.card-progress-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+.card-obj-label { font-size: 10px; color: var(–text-dim); letter-spacing: 1px; text-transform: uppercase; }
+.card-obj-value { font-family: ‘DM Mono’, monospace; font-size: 12px; color: var(–gold); }
+.progress-bar-bg { height: 5px; background: rgba(255,255,255,0.06); border-radius: 10px; overflow: hidden; margin-bottom: 10px; }
+.progress-bar-fill { height: 100%; border-radius: 10px; transition: width 0.8s cubic-bezier(.4,0,.2,1), background 0.5s; }
+
+.card-info-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.05); }
+.info-label { font-size: 9px; letter-spacing: 1.5px; color: var(–text-dim); text-transform: uppercase; margin-bottom: 2px; }
+.info-value { font-family: ‘DM Mono’, monospace; font-size: 12px; color: var(–text-mid); }
+
+.card-actions { display: flex; gap: 8px; margin-top: 12px; }
+.btn-sm { flex: 1; padding: 7px; border-radius: 8px; border: 1px solid var(–card-border); background: transparent; color: var(–text-dim); font-family: ‘Outfit’, sans-serif; font-size: 11px; cursor: pointer; transition: all 0.2s; }
+.btn-sm:hover { border-color: var(–gold-dim); color: var(–gold); }
+.btn-sm.btn-done { border-color: var(–gold-dim); color: var(–gold); }
+.btn-sm.btn-done:hover { background: rgba(201,149,42,0.12); }
+.btn-sm.btn-edit:hover { border-color: #3b5bdb; color: #748ffc; }
+.btn-sm.btn-delete:hover { border-color: #c92a2a; color: #fa5252; }
+.btn-sm.btn-reactivate { border-color: var(–gold-dim); color: var(–gold); }
+
+.card-status-badge { display: none; position: absolute; top: 12px; right: 12px; background: rgba(201,149,42,0.15); border: 1px solid var(–gold-dim); border-radius: 6px; padding: 3px 8px; font-size: 10px; color: var(–gold); letter-spacing: 1px; align-items: center; gap: 4px; }
+
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.75); backdrop-filter: blur(8px); z-index: 200; display: flex; align-items: flex-end; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
+.modal-overlay.open { opacity: 1; pointer-events: all; }
+.modal { width: 100%; background: var(–bg2); border-top: 1px solid var(–card-border); border-radius: 24px 24px 0 0; padding: 24px 20px 40px; transform: translateY(100%); transition: transform 0.35s cubic-bezier(.4,0,.2,1); }
+.modal-overlay.open .modal { transform: translateY(0); }
+.modal-handle { width: 40px; height: 4px; background: var(–card-border); border-radius: 2px; margin: 0 auto 20px; }
+.modal-title { font-family: ‘Cormorant Garamond’, serif; font-size: 22px; font-weight: 600; color: var(–gold2); margin-bottom: 20px; letter-spacing: 1px; }
+
+.field { margin-bottom: 14px; }
+.field label { display: block; font-size: 10px; letter-spacing: 1.5px; color: var(–text-dim); text-transform: uppercase; margin-bottom: 6px; }
+.field input { width: 100%; background: var(–bg3); border: 1px solid var(–card-border); border-radius: 10px; padding: 12px 14px; color: var(–text); font-family: ‘Outfit’, sans-serif; font-size: 15px; outline: none; transition: border-color 0.2s; }
+.field input:focus { border-color: var(–gold-dim); }
+.field input::placeholder { color: var(–text-dim); }
+.field-hint { font-size: 11px; color: var(–text-dim); margin-top: 5px; line-height: 1.4; }
+.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; }
+.field-row .field { margin-bottom: 0; }
+
+.preview-box { background: rgba(201,149,42,0.07); border: 1px solid rgba(201,149,42,0.2); border-radius: 10px; padding: 10px 14px; margin-bottom: 14px; font-size: 12px; color: var(–gold); line-height: 1.8; display: none; }
+
+.modal-actions { display: flex; gap: 10px; margin-top: 20px; }
+.btn-cancel { flex: 1; padding: 13px; border-radius: 12px; border: 1px solid var(–card-border); background: transparent; color: var(–text-dim); font-family: ‘Outfit’, sans-serif; font-size: 14px; cursor: pointer; }
+.btn-save { flex: 2; padding: 13px; border-radius: 12px; border: none; background: linear-gradient(135deg, var(–gold), var(–gold2)); color: #080c12; font-family: ‘Outfit’, sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; }
+.btn-save:hover { opacity: 0.9; }
+
+.empty { text-align: center; padding: 60px 20px; position: relative; z-index: 1; }
+.empty-icon { font-size: 48px; margin-bottom: 16px; opacity: 0.4; }
+.empty-title { font-family: ‘Cormorant Garamond’, serif; font-size: 22px; color: var(–text-dim); margin-bottom: 8px; }
+.empty-sub { font-size: 13px; color: var(–text-dim); opacity: 0.6; }
+
+.bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(8,12,18,0.95); backdrop-filter: blur(20px); border-top: 1px solid rgba(201,149,42,0.1); display: flex; padding: 10px 0 20px; z-index: 100; }
+.nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; padding: 4px; border: none; background: none; }
+.nav-icon { font-size: 20px; }
+.nav-label { font-size: 10px; letter-spacing: 0.5px; color: var(–text-dim); }
+.nav-item.active .nav-label { color: var(–gold2); }
+.nav-item.active .nav-icon { filter: drop-shadow(0 0 6px rgba(240,180,41,0.5)); }
+
+.toast { position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(–bg3); border: 1px solid var(–gold-dim); border-radius: 12px; padding: 10px 18px; font-size: 13px; color: var(–gold2); opacity: 0; pointer-events: none; transition: all 0.3s; z-index: 300; white-space: nowrap; }
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+.config-panel { padding: 20px; position: relative; z-index: 1; }
+.config-title { font-family: ‘Cormorant Garamond’, serif; font-size: 20px; color: var(–gold2); margin-bottom: 20px; letter-spacing: 1px; }
+.config-card { background: var(–card); border: 1px solid var(–card-border); border-radius: var(–radius); padding: 16px; margin-bottom: 14px; }
+.config-card-title { font-size: 12px; letter-spacing: 1.5px; color: var(–gold); text-transform: uppercase; margin-bottom: 12px; }
+.config-field { margin-bottom: 12px; }
+.config-field label { display: block; font-size: 11px; color: var(–text-dim); margin-bottom: 6px; }
+.config-field input { width: 100%; background: var(–bg3); border: 1px solid var(–card-border); border-radius: 8px; padding: 10px 12px; color: var(–text); font-family: ‘DM Mono’, monospace; font-size: 13px; outline: none; }
+.config-field input:focus { border-color: var(–gold-dim); }
+.btn-config-save { width: 100%; padding: 13px; border-radius: 12px; border: none; background: linear-gradient(135deg, var(–gold), var(–gold2)); color: #080c12; font-family: ‘Outfit’, sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 8px; }
+.info-box { background: rgba(201,149,42,0.07); border: 1px solid rgba(201,149,42,0.2); border-radius: 10px; padding: 12px; font-size: 12px; color: var(–text-dim); line-height: 1.6; margin-top: 6px; }
+.info-box strong { color: var(–gold); }
+
+.historique-panel { padding: 20px 20px 100px; position: relative; z-index: 1; }
+.histo-title { font-family: ‘Cormorant Garamond’, serif; font-size: 20px; color: var(–gold2); margin-bottom: 16px; letter-spacing: 1px; }
+.histo-item { background: var(–card); border: 1px solid var(–card-border); border-radius: 12px; padding: 14px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; opacity: 0.6; }
+.histo-name { font-size: 14px; font-weight: 500; margin-bottom: 3px; }
+.histo-ticker { font-family: ‘DM Mono’, monospace; font-size: 11px; color: var(–text-dim); }
+.histo-achat { font-family: ‘DM Mono’, monospace; font-size: 12px; color: var(–text-dim); }
+.histo-badge { display: inline-block; margin-top: 4px; padding: 2px 8px; border-radius: 20px; font-size: 10px; background: rgba(201,149,42,0.15); color: var(–gold); border: 1px solid var(–gold-dim); }
+
+@media (min-width: 640px) {
+header, .tabs, .summary, .cards, .config-panel, .historique-panel { max-width: 480px; margin-left: auto; margin-right: auto; }
+.summary { margin: 16px auto; }
+.bottom-nav { max-width: 480px; left: 50%; transform: translateX(-50%); }
+.toast { bottom: 100px; }
+}
+</style>
+
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">📈</div>
+    <div>
+      <div class="logo-text">TRACKER</div>
+      <div class="logo-sub">SUIVEZ · ATTEIGNEZ · INVESTISSEZ</div>
     </div>
   </div>
-    """
+  <button class="btn-add" onclick="openModal()" id="btn-add-header">+</button>
+</header>
 
-body_html += """
-  <p style="color:#6b7a99;font-size:12px;margin-top:20px;">
-    Pensez à marquer ces positions comme "Objectif atteint" dans votre app Tracker.
-  </p>
-</div></body></html>
-"""
+<div class="tabs">
+  <button class="tab active" onclick="switchTab('suivi')">Mes actions</button>
+  <button class="tab" onclick="switchTab('historique')">Historique</button>
+  <button class="tab" onclick="switchTab('config')">Config</button>
+</div>
 
-msg = MIMEMultipart("alternative")
-msg["Subject"] = subject
-msg["From"] = GMAIL_USER
-msg["To"] = DEST_EMAIL
-msg.attach(MIMEText(body_html, "html"))
+<div class="summary" id="summary-bar">
+  <div class="summary-item">
+    <div class="summary-label">Positions</div>
+    <div class="summary-value gold" id="sum-positions">0</div>
+  </div>
+  <div class="summary-divider"></div>
+  <div class="summary-item">
+    <div class="summary-label">Investi</div>
+    <div class="summary-value" id="sum-investi">—</div>
+  </div>
+  <div class="summary-divider"></div>
+  <div class="summary-item">
+    <div class="summary-label">Valeur</div>
+    <div class="summary-value" id="sum-valeur">—</div>
+  </div>
+  <div class="summary-divider"></div>
+  <div class="summary-item">
+    <div class="summary-label">Gain/Perte</div>
+    <div class="summary-value" id="sum-gain">—</div>
+  </div>
+</div>
 
-try:
-    with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
-        server.login(GMAIL_USER, GMAIL_APP_PASSWORD)
-        server.sendmail(GMAIL_USER, DEST_EMAIL, msg.as_string())
-    print(f"✅ Email envoyé à {DEST_EMAIL}")
-except Exception as e:
-    print(f"❌ Erreur envoi email : {e}")
+<div id="panel-suivi">
+  <div class="cards" id="cards-container"></div>
+  <div class="empty" id="empty-state" style="display:none">
+    <div class="empty-icon">📊</div>
+    <div class="empty-title">Aucune position</div>
+    <div class="empty-sub">Appuyez sur + pour ajouter votre première action</div>
+  </div>
+</div>
+
+<div id="panel-historique" style="display:none">
+  <div class="historique-panel">
+    <div class="histo-title">Historique</div>
+    <div id="histo-container"></div>
+    <div id="histo-empty" class="empty" style="display:none">
+      <div class="empty-icon">🏆</div>
+      <div class="empty-title">Aucun objectif atteint</div>
+      <div class="empty-sub">Les actions grisées apparaîtront ici</div>
+    </div>
+  </div>
+</div>
+
+<div id="panel-config" style="display:none">
+  <div class="config-panel">
+    <div class="config-title">Configuration</div>
+    <div class="config-card">
+      <div class="config-card-title">📧 Alertes Email</div>
+      <div class="config-field">
+        <label>Votre adresse email (destinataire)</label>
+        <input type="email" id="cfg-email" placeholder="votre@email.com">
+      </div>
+      <div class="info-box">
+        Alertes envoyées par <strong>GitHub Actions</strong> à <strong>11h00</strong> et <strong>17h00</strong> du lundi au vendredi.
+      </div>
+    </div>
+    <div class="config-card">
+      <div class="config-card-title">⚙️ Secrets GitHub</div>
+      <div class="info-box">
+        À renseigner dans Settings → Secrets → Actions de votre dépôt :<br><br>
+        <code style="color:var(--gold);background:rgba(201,149,42,0.1);padding:2px 6px;border-radius:4px;">GMAIL_USER</code> → votre Gmail<br>
+        <code style="color:var(--gold);background:rgba(201,149,42,0.1);padding:2px 6px;border-radius:4px;">GMAIL_APP_PASSWORD</code> → mot de passe app<br>
+        <code style="color:var(--gold);background:rgba(201,149,42,0.1);padding:2px 6px;border-radius:4px;">DEST_EMAIL</code> → email de réception
+      </div>
+    </div>
+    <div class="config-card">
+      <div class="config-card-title">📤 Exporter vers GitHub</div>
+      <div class="info-box" style="margin-bottom:10px;">
+        Copiez le JSON et collez-le dans <strong>portfolio.json</strong> sur GitHub pour activer les alertes automatiques.
+      </div>
+      <button class="btn-config-save" onclick="exportPortfolio()" style="background:var(--bg3);border:1px solid var(--card-border);color:var(--text-dim);">
+        📋 Copier le JSON du portefeuille
+      </button>
+      <button class="btn-config-save" onclick="saveConfig()" style="margin-top:10px;">✓ Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL -->
+
+<div class="modal-overlay" id="modal-overlay" onclick="closeModalOutside(event)">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="modal-title">Nouvelle position</div>
+
+```
+<div class="field">
+  <label>Nom de l'action / ETF / Crypto</label>
+  <input type="text" id="f-name" placeholder="Ex: Nvidia, ETF SP500 Amundi, Bitcoin">
+</div>
+<div class="field">
+  <label>Ticker (symbole Yahoo Finance)</label>
+  <input type="text" id="f-ticker" placeholder="Ex: NVDA, MSFT, BTC-USD" style="font-family:'DM Mono',monospace;text-transform:uppercase;">
+  <div class="field-hint">Trouvez le ticker sur <a href="https://finance.yahoo.com" target="_blank" style="color:var(--gold)">finance.yahoo.com</a></div>
+</div>
+<div class="field-row">
+  <div class="field">
+    <label>Montant investi (€)</label>
+    <input type="number" id="f-montant" placeholder="Ex: 500" step="0.01" min="0" oninput="updatePreview()">
+  </div>
+  <div class="field">
+    <label>Nombre d'actions</label>
+    <input type="number" id="f-qty" placeholder="Ex: 10" step="0.000001" min="0" oninput="updatePreview()">
+  </div>
+</div>
+
+<div class="preview-box" id="preview-box"></div>
+
+<div class="modal-actions">
+  <button class="btn-cancel" onclick="closeModal()">Annuler</button>
+  <button class="btn-save" onclick="savePosition()">Enregistrer</button>
+</div>
 ```
 
-def main():
-print(“🔍 Vérification des prix en cours…\n”)
+  </div>
+</div>
 
-```
-if not os.path.exists(PORTFOLIO_FILE):
-    print(f"❌ Fichier {PORTFOLIO_FILE} introuvable.")
-    return
+<div class="toast" id="toast"></div>
 
-with open(PORTFOLIO_FILE, "r") as f:
-    portfolio = json.load(f)
+<div class="bottom-nav">
+  <button class="nav-item active" onclick="switchTab('suivi')" id="nav-suivi">
+    <span class="nav-icon">📊</span><span class="nav-label">Suivi</span>
+  </button>
+  <button class="nav-item" onclick="switchTab('historique')" id="nav-historique">
+    <span class="nav-icon">🏆</span><span class="nav-label">Historique</span>
+  </button>
+  <button class="nav-item" onclick="switchTab('config')" id="nav-config">
+    <span class="nav-icon">⚙️</span><span class="nav-label">Config</span>
+  </button>
+</div>
 
-if not portfolio:
-    print("ℹ️  Portefeuille vide.")
-    return
+<script>
+let positions = JSON.parse(localStorage.getItem('tracker_positions') || '[]');
+let config = JSON.parse(localStorage.getItem('tracker_config') || '{}');
+let editingId = null;
 
-alerts = []
+document.addEventListener('DOMContentLoaded', () => {
+  loadConfig();
+  renderAll();
+  updatePrices();
+});
 
-for p in portfolio:
-    ticker = p.get("ticker")
-    name = p.get("name", ticker)
-    montant_investi = float(p.get("montantInvesti", 0))
-    prix_achat = float(p.get("prixAchat", 0))
-    qty = float(p.get("qty", 0))
-    objectif = montant_investi * 2
+function save() { localStorage.setItem('tracker_positions', JSON.stringify(positions)); }
 
-    if not ticker or montant_investi <= 0:
-        continue
+function switchTab(tab) {
+  ['suivi','historique','config'].forEach(t => {
+    document.getElementById('panel-' + t).style.display = t === tab ? 'block' : 'none';
+    document.getElementById('nav-' + t)?.classList.toggle('active', t === tab);
+  });
+  document.querySelectorAll('.tab').forEach((el, i) => {
+    el.classList.toggle('active', ['suivi','historique','config'][i] === tab);
+  });
+  document.getElementById('btn-add-header').style.display = tab === 'suivi' ? 'flex' : 'none';
+  document.getElementById('summary-bar').style.display = tab === 'suivi' ? 'flex' : 'none';
+  if (tab === 'historique') renderHistorique();
+}
 
-    print(f"📊 {name} ({ticker})")
-    prix_actuel = fetch_price(ticker)
+function openModal(id = null) {
+  editingId = id;
+  document.getElementById('modal-title').textContent = id ? 'Modifier la position' : 'Nouvelle position';
+  if (id) {
+    const p = positions.find(x => x.id === id);
+    document.getElementById('f-name').value = p.name;
+    document.getElementById('f-ticker').value = p.ticker;
+    document.getElementById('f-montant').value = p.montantInvesti;
+    document.getElementById('f-qty').value = p.qty || '';
+    updatePreview();
+  } else {
+    document.getElementById('f-name').value = '';
+    document.getElementById('f-ticker').value = '';
+    document.getElementById('f-montant').value = '';
+    document.getElementById('f-qty').value = '';
+    document.getElementById('preview-box').style.display = 'none';
+  }
+  document.getElementById('modal-overlay').classList.add('open');
+  setTimeout(() => document.getElementById('f-name').focus(), 400);
+}
 
-    if prix_actuel is None:
-        print(f"  → Prix non disponible\n")
-        continue
+function closeModal() { document.getElementById('modal-overlay').classList.remove('open'); editingId = null; }
+function closeModalOutside(e) { if (e.target === document.getElementById('modal-overlay')) closeModal(); }
 
-    # Valeur actuelle = nb actions × prix actuel
-    valeur_actuelle = qty * prix_actuel if qty > 0 else montant_investi
-    gain = valeur_actuelle - montant_investi
-    pct = (gain / montant_investi) * 100
+function updatePreview() {
+  const montant = parseFloat(document.getElementById('f-montant').value);
+  const qty = parseFloat(document.getElementById('f-qty').value);
+  const box = document.getElementById('preview-box');
+  if (montant > 0) {
+    const prixAchat = qty > 0 ? (montant / qty).toFixed(4) : '—';
+    box.innerHTML = `💰 Prix d'achat/action : <strong>${prixAchat} €</strong> &nbsp;|&nbsp; 🎯 Objectif x2 : <strong>${(montant * 2).toFixed(2)} €</strong>`;
+    box.style.display = 'block';
+  } else {
+    box.style.display = 'none';
+  }
+}
 
-    print(f"  Investi: {montant_investi:.2f} € | Valeur actuelle: {valeur_actuelle:.2f} € | Gain: {gain:+.2f} € ({pct:+.1f}%)")
-    print(f"  Objectif x2: {objectif:.2f} €")
+function savePosition() {
+  const name = document.getElementById('f-name').value.trim();
+  const ticker = document.getElementById('f-ticker').value.trim().toUpperCase();
+  const montantInvesti = parseFloat(document.getElementById('f-montant').value);
+  const qty = parseFloat(document.getElementById('f-qty').value) || null;
 
-    if valeur_actuelle >= objectif:
-        print(f"  🚀 OBJECTIF x2 ATTEINT !")
-        alerts.append({
-            "name": name,
-            "ticker": ticker,
-            "montantInvesti": montant_investi,
-            "valeurActuelle": valeur_actuelle,
-            "objectif": objectif
-        })
-    else:
-        progress = (valeur_actuelle / objectif) * 100
-        print(f"  ⏳ Progression : {progress:.1f}% vers l'objectif x2")
+  if (!name || !ticker || !montantInvesti || montantInvesti <= 0) {
+    showToast('⚠️ Remplissez tous les champs obligatoires'); return;
+  }
 
-    print()
+  const prixAchat = qty ? montantInvesti / qty : montantInvesti;
 
-print(f"─────────────────────────────")
-print(f"✅ Vérification terminée : {len(alerts)} alerte(s) sur {len(portfolio)} position(s)")
+  if (editingId) {
+    const p = positions.find(x => x.id === editingId);
+    Object.assign(p, { name, ticker, montantInvesti, qty, prixAchat, objectif: montantInvesti * 2 });
+    showToast('✓ Position modifiée');
+  } else {
+    positions.push({ id: Date.now().toString(), name, ticker, montantInvesti, qty, prixAchat, objectif: montantInvesti * 2, currentPrice: null, grised: false, addedAt: new Date().toISOString() });
+    showToast('✓ Position ajoutée');
+  }
+  save(); closeModal(); renderAll();
+}
 
-if alerts:
-    print(f"\n📧 Envoi de l'email d'alerte...")
-    send_email(alerts)
-else:
-    print("📭 Aucune alerte à envoyer.")
-```
+function deletePosition(id) {
+  if (!confirm('Supprimer cette position ?')) return;
+  positions = positions.filter(x => x.id !== id);
+  save(); renderAll(); showToast('🗑 Position supprimée');
+}
 
-if **name** == “**main**”:
-main()
+function toggleGrise(id) {
+  const p = positions.find(x => x.id === id);
+  p.grised = !p.grised;
+  save(); renderAll();
+  showToast(p.grised ? '✓ Objectif marqué atteint' : '↩ Position réactivée');
+}
+
+function renderAll() { renderCards(); renderSummary(); }
+
+function renderCards() {
+  const container = document.getElementById('cards-container');
+  const empty = document.getElementById('empty-state');
+  const active = positions.filter(p => !p.grised);
+  if (active.length === 0) { container.innerHTML = ''; empty.style.display = 'block'; return; }
+  empty.style.display = 'none';
+  container.innerHTML = active.map((p, i) => cardHTML(p, i)).join('');
+}
+
+function cardHTML(p, i) {
+  const prixActuel = p.currentPrice || p.prixAchat;
+  const valeurActuelle = p.qty ? p.qty * prixActuel : p.montantInvesti;
+  const gain = valeurActuelle - p.montantInvesti;
+  const gainStr = (gain >= 0 ? '+' : '') + gain.toFixed(2) + ' €';
+  const pct = ((valeurActuelle - p.montantInvesti) / p.montantInvesti) * 100;
+  const pctStr = (pct >= 0 ? '+' : '') + pct.toFixed(2) + '%';
+  const cls = pct > 0 ? 'up' : pct < 0 ? 'down' : 'neutral';
+  const objectif = p.montantInvesti * 2;
+  const progress = Math.min((valeurActuelle / objectif) * 100, 100);
+  const progressColor = progress < 40 ? '#ef4444' : progress < 70 ? '#f97316' : progress < 90 ? '#f0b429' : '#22c55e';
+  const tickerShort = p.ticker.substring(0, 5);
+
+  return `
+  <div class="card" id="card-${p.id}" style="animation-delay:${i*0.07}s">
+    <div class="card-status-badge">✓ ATTEINT</div>
+    <div class="card-header">
+      <div class="card-left">
+        <div class="ticker-badge">${tickerShort}</div>
+        <div>
+          <div class="card-name">${escHtml(p.name)}</div>
+          <div class="card-ticker">${p.ticker}</div>
+        </div>
+      </div>
+      <div class="card-right">
+        <div class="card-valeur">${formatPrice(valeurActuelle)}</div>
+        <div class="card-change ${cls}">${pctStr}</div>
+        <div class="gain-badge ${cls}">${gainStr}</div>
+      </div>
+    </div>
+    <div class="card-progress-row">
+      <div class="card-obj-label">Objectif x2</div>
+      <div class="card-obj-value">${formatPrice(objectif)} — ${progress.toFixed(1)}%</div>
+    </div>
+    <div class="progress-bar-bg">
+      <div class="progress-bar-fill" style="width:${progress}%;background:${progressColor};"></div>
+    </div>
+    <div class="card-info-row">
+      <div class="info-item">
+        <div class="info-label">Investi</div>
+        <div class="info-value">${formatPrice(p.montantInvesti)}</div>
+      </div>
+      <div class="info-item">
+        <div class="info-label">Prix/action</div>
+        <div class="info-value">${formatPrice(prixActuel)}</div>
+      </div>
+      <div class="info-item">
+        <div class="info-label">Quantité</div>
+        <div class="info-value">${p.qty || '—'}</div>
+      </div>
+    </div>
+    <div class="card-actions">
+      <button class="btn-sm btn-edit" onclick="openModal('${p.id}')">✏️ Modifier</button>
+      <button class="btn-sm btn-done" onclick="toggleGrise('${p.id}')">✓ Objectif atteint</button>
+      <button class="btn-sm btn-delete" onclick="deletePosition('${p.id}')">🗑</button>
+    </div>
+  </div>`;
+}
+
+function renderSummary() {
+  const active = positions.filter(p => !p.grised);
+  const totalInvesti = active.reduce((s, p) => s + p.montantInvesti, 0);
+  const totalValeur = active.reduce((s, p) => {
+    const px = p.currentPrice || p.prixAchat;
+    return s + (p.qty ? p.qty * px : p.montantInvesti);
+  }, 0);
+  const totalGain = totalValeur - totalInvesti;
+
+  document.getElementById('sum-positions').textContent = active.length;
+  document.getElementById('sum-investi').textContent = formatPrice(totalInvesti);
+  document.getElementById('sum-valeur').textContent = formatPrice(totalValeur);
+  const gainEl = document.getElementById('sum-gain');
+  gainEl.textContent = (totalGain >= 0 ? '+' : '') + formatPrice(totalGain);
+  gainEl.className = 'summary-value ' + (totalGain > 0 ? 'green' : totalGain < 0 ? 'red' : '');
+}
+
+function renderHistorique() {
+  const grised = positions.filter(p => p.grised);
+  const container = document.getElementById('histo-container');
+  const empty = document.getElementById('histo-empty');
+  if (grised.length === 0) { container.innerHTML = ''; empty.style.display = 'block'; return; }
+  empty.style.display = 'none';
+  container.innerHTML = grised.map(p => `
+    <div class="histo-item">
+      <div><div class="histo-name">${escHtml(p.name)}</div><div class="histo-ticker">${p.ticker}</div></div>
+      <div style="text-align:right">
+        <div class="histo-achat">Investi: ${formatPrice(p.montantInvesti)}</div>
+        <div class="histo-badge">✓ Objectif atteint</div><br>
+        <button class="btn-sm btn-reactivate" style="margin-top:6px;font-size:10px;" onclick="toggleGrise('${p.id}')">↩ Réactiver</button>
+      </div>
+    </div>`).join('');
+}
+
+async function updatePrices() {
+  const active = positions.filter(p => !p.grised && p.ticker);
+  if (!active.length) return;
+  for (const p of active) {
+    try { const price = await fetchPrice(p.ticker); if (price) p.currentPrice = price; } catch(e) {}
+  }
+  save(); renderAll();
+}
+
+async function fetchPrice(ticker) {
+  try {
+    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?interval=1d&range=1d`;
+    const r = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);
+    const data = await r.json();
+    const parsed = JSON.parse(data.contents);
+    return parsed?.chart?.result?.[0]?.meta?.regularMarketPrice || null;
+  } catch(e) { return null; }
+}
+
+function loadConfig() { if (config.email) document.getElementById('cfg-email').value = config.email; }
+
+function saveConfig() {
+  config.email = document.getElementById('cfg-email').value.trim();
+  localStorage.setItem('tracker_config', JSON.stringify(config));
+  showToast('✓ Configuration enregistrée');
+}
+
+function exportPortfolio() {
+  const data = positions.filter(p => !p.grised).map(p => ({
+    name: p.name, ticker: p.ticker,
+    montantInvesti: p.montantInvesti, prixAchat: p.prixAchat,
+    objectif: p.montantInvesti * 2, qty: p.qty
+  }));
+  const json = JSON.stringify(data, null, 2);
+  navigator.clipboard.writeText(json).then(() => showToast('📋 JSON copié !')).catch(() => prompt('Copiez ce JSON :', json));
+}
+
+function formatPrice(v) {
+  if (v === null || v === undefined) return '—';
+  return v.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+}
+
+function escHtml(str) { return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+</script>
+
+</body>
+</html>
