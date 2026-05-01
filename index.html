@@ -1,0 +1,1195 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>TRACKER — Suivi Portefeuille</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600;700&family=DM+Mono:wght@300;400;500&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #080c12;
+    --bg2: #0e1420;
+    --bg3: #141c2a;
+    --card: #111827;
+    --card-border: #1e2d42;
+    --gold: #c9952a;
+    --gold2: #f0b429;
+    --gold-dim: #7a5a18;
+    --green: #22c55e;
+    --red: #ef4444;
+    --orange: #f97316;
+    --text: #e8eaf0;
+    --text-dim: #6b7a99;
+    --text-mid: #9aa5be;
+    --radius: 16px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    font-family: 'Outfit', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Background texture */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 80% 50% at 50% -10%, rgba(201,149,42,0.07) 0%, transparent 60%),
+      radial-gradient(ellipse 40% 40% at 90% 90%, rgba(201,149,42,0.04) 0%, transparent 50%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ── HEADER ── */
+  header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(8,12,18,0.92);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgba(201,149,42,0.12);
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .logo-icon {
+    width: 34px; height: 34px;
+    border: 1.5px solid var(--gold);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+  }
+
+  .logo-text {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    color: var(--gold2);
+  }
+
+  .logo-sub {
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: var(--text-dim);
+    font-weight: 300;
+  }
+
+  .btn-add {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    border: 1.5px solid var(--gold);
+    background: transparent;
+    color: var(--gold2);
+    font-size: 22px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s;
+    line-height: 1;
+  }
+  .btn-add:hover { background: rgba(201,149,42,0.15); }
+
+  /* ── TABS ── */
+  .tabs {
+    display: flex;
+    padding: 16px 20px 0;
+    gap: 4px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .tab {
+    flex: 1;
+    padding: 8px;
+    border: none;
+    background: transparent;
+    color: var(--text-dim);
+    font-family: 'Outfit', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+    letter-spacing: 0.5px;
+  }
+
+  .tab.active {
+    color: var(--gold2);
+    border-bottom-color: var(--gold2);
+  }
+
+  /* ── SUMMARY BAR ── */
+  .summary {
+    margin: 16px 20px;
+    padding: 14px 18px;
+    background: var(--bg3);
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: relative;
+    z-index: 1;
+  }
+
+  .summary-item { text-align: center; }
+  .summary-label { font-size: 10px; letter-spacing: 1.5px; color: var(--text-dim); text-transform: uppercase; margin-bottom: 4px; }
+  .summary-value { font-family: 'DM Mono', monospace; font-size: 15px; font-weight: 500; color: var(--text); }
+  .summary-value.gold { color: var(--gold2); }
+  .summary-divider { width: 1px; height: 30px; background: var(--card-border); }
+
+  /* ── CARDS ── */
+  .cards {
+    padding: 0 20px 100px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius);
+    padding: 16px;
+    transition: all 0.3s;
+    animation: slideUp 0.4s ease both;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+
+  .card:hover::before { opacity: 1; }
+
+  .card.grised {
+    opacity: 0.45;
+    filter: grayscale(80%);
+  }
+
+  .card.grised .card-status-badge {
+    display: flex;
+  }
+
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Card header */
+  .card-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+
+  .card-left { display: flex; align-items: center; gap: 12px; }
+
+  .ticker-badge {
+    width: 44px; height: 44px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, var(--bg3), var(--bg2));
+    border: 1px solid var(--card-border);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--gold2);
+    letter-spacing: 0.5px;
+    text-align: center;
+    padding: 2px;
+  }
+
+  .card-name {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 2px;
+  }
+
+  .card-ticker {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--text-dim);
+    letter-spacing: 1px;
+  }
+
+  .card-right { text-align: right; }
+
+  .card-price {
+    font-family: 'DM Mono', monospace;
+    font-size: 18px;
+    font-weight: 500;
+    color: var(--text);
+    margin-bottom: 2px;
+  }
+
+  .card-change {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+  }
+  .card-change.up { color: var(--green); }
+  .card-change.down { color: var(--red); }
+  .card-change.neutral { color: var(--text-dim); }
+
+  /* Progress */
+  .card-progress-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+  }
+
+  .card-obj-label {
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  .card-obj-value {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--gold);
+  }
+
+  .progress-bar-bg {
+    height: 5px;
+    background: rgba(255,255,255,0.06);
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 10px;
+  }
+
+  .progress-bar-fill {
+    height: 100%;
+    border-radius: 10px;
+    transition: width 0.8s cubic-bezier(.4,0,.2,1), background 0.5s;
+  }
+
+  /* Price info row */
+  .card-info-row {
+    display: flex;
+    justify-content: space-between;
+    padding-top: 8px;
+    border-top: 1px solid rgba(255,255,255,0.05);
+  }
+
+  .info-item { }
+  .info-label { font-size: 9px; letter-spacing: 1.5px; color: var(--text-dim); text-transform: uppercase; margin-bottom: 2px; }
+  .info-value { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--text-mid); }
+
+  /* Card actions */
+  .card-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+  }
+
+  .btn-sm {
+    flex: 1;
+    padding: 7px;
+    border-radius: 8px;
+    border: 1px solid var(--card-border);
+    background: transparent;
+    color: var(--text-dim);
+    font-family: 'Outfit', sans-serif;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.3px;
+  }
+
+  .btn-sm:hover { border-color: var(--gold-dim); color: var(--gold); }
+
+  .btn-sm.btn-done {
+    border-color: var(--gold-dim);
+    color: var(--gold);
+  }
+
+  .btn-sm.btn-done:hover {
+    background: rgba(201,149,42,0.12);
+  }
+
+  .btn-sm.btn-edit:hover { border-color: #3b5bdb; color: #748ffc; }
+  .btn-sm.btn-delete:hover { border-color: #c92a2a; color: #fa5252; }
+
+  .btn-sm.btn-reactivate {
+    border-color: var(--gold-dim);
+    color: var(--gold);
+  }
+
+  /* Status badge */
+  .card-status-badge {
+    display: none;
+    position: absolute;
+    top: 12px; right: 12px;
+    background: rgba(201,149,42,0.15);
+    border: 1px solid var(--gold-dim);
+    border-radius: 6px;
+    padding: 3px 8px;
+    font-size: 10px;
+    color: var(--gold);
+    letter-spacing: 1px;
+    align-items: center;
+    gap: 4px;
+  }
+
+  /* ── MODAL ── */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.75);
+    backdrop-filter: blur(8px);
+    z-index: 200;
+    display: flex;
+    align-items: flex-end;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s;
+  }
+
+  .modal-overlay.open {
+    opacity: 1;
+    pointer-events: all;
+  }
+
+  .modal {
+    width: 100%;
+    background: var(--bg2);
+    border-top: 1px solid var(--card-border);
+    border-radius: 24px 24px 0 0;
+    padding: 24px 20px 40px;
+    transform: translateY(100%);
+    transition: transform 0.35s cubic-bezier(.4,0,.2,1);
+  }
+
+  .modal-overlay.open .modal {
+    transform: translateY(0);
+  }
+
+  .modal-handle {
+    width: 40px; height: 4px;
+    background: var(--card-border);
+    border-radius: 2px;
+    margin: 0 auto 20px;
+  }
+
+  .modal-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--gold2);
+    margin-bottom: 20px;
+    letter-spacing: 1px;
+  }
+
+  .field {
+    margin-bottom: 14px;
+  }
+
+  .field label {
+    display: block;
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+
+  .field input {
+    width: 100%;
+    background: var(--bg3);
+    border: 1px solid var(--card-border);
+    border-radius: 10px;
+    padding: 12px 14px;
+    color: var(--text);
+    font-family: 'Outfit', sans-serif;
+    font-size: 15px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .field input:focus {
+    border-color: var(--gold-dim);
+  }
+
+  .field input::placeholder { color: var(--text-dim); }
+
+  .field-hint {
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-top: 5px;
+    line-height: 1.4;
+  }
+
+  .modal-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+  }
+
+  .btn-cancel {
+    flex: 1;
+    padding: 13px;
+    border-radius: 12px;
+    border: 1px solid var(--card-border);
+    background: transparent;
+    color: var(--text-dim);
+    font-family: 'Outfit', sans-serif;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-cancel:hover { border-color: #555; color: var(--text); }
+
+  .btn-save {
+    flex: 2;
+    padding: 13px;
+    border-radius: 12px;
+    border: none;
+    background: linear-gradient(135deg, var(--gold), var(--gold2));
+    color: #080c12;
+    font-family: 'Outfit', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.5px;
+  }
+  .btn-save:hover { opacity: 0.9; transform: translateY(-1px); }
+
+  /* ── EMPTY STATE ── */
+  .empty {
+    text-align: center;
+    padding: 60px 20px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .empty-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+    opacity: 0.4;
+  }
+
+  .empty-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 22px;
+    color: var(--text-dim);
+    margin-bottom: 8px;
+  }
+
+  .empty-sub {
+    font-size: 13px;
+    color: var(--text-dim);
+    opacity: 0.6;
+  }
+
+  /* ── BOTTOM NAV ── */
+  .bottom-nav {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    background: rgba(8,12,18,0.95);
+    backdrop-filter: blur(20px);
+    border-top: 1px solid rgba(201,149,42,0.1);
+    display: flex;
+    padding: 10px 0 20px;
+    z-index: 100;
+  }
+
+  .nav-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+    padding: 4px;
+    transition: all 0.2s;
+    border: none;
+    background: none;
+  }
+
+  .nav-icon { font-size: 20px; }
+  .nav-label { font-size: 10px; letter-spacing: 0.5px; color: var(--text-dim); }
+  .nav-item.active .nav-label { color: var(--gold2); }
+  .nav-item.active .nav-icon { filter: drop-shadow(0 0 6px rgba(240,180,41,0.5)); }
+
+  /* ── TOAST ── */
+  .toast {
+    position: fixed;
+    bottom: 90px; left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--bg3);
+    border: 1px solid var(--gold-dim);
+    border-radius: 12px;
+    padding: 10px 18px;
+    font-size: 13px;
+    color: var(--gold2);
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.3s;
+    z-index: 300;
+    white-space: nowrap;
+  }
+
+  .toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  /* ── CONFIG PANEL ── */
+  .config-panel {
+    padding: 20px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .config-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 20px;
+    color: var(--gold2);
+    margin-bottom: 20px;
+    letter-spacing: 1px;
+  }
+
+  .config-card {
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-bottom: 14px;
+  }
+
+  .config-card-title {
+    font-size: 12px;
+    letter-spacing: 1.5px;
+    color: var(--gold);
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+
+  .config-field {
+    margin-bottom: 12px;
+  }
+
+  .config-field label {
+    display: block;
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-bottom: 6px;
+  }
+
+  .config-field input {
+    width: 100%;
+    background: var(--bg3);
+    border: 1px solid var(--card-border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .config-field input:focus { border-color: var(--gold-dim); }
+  .config-field input::placeholder { color: var(--text-dim); font-size: 12px; }
+
+  .btn-config-save {
+    width: 100%;
+    padding: 13px;
+    border-radius: 12px;
+    border: none;
+    background: linear-gradient(135deg, var(--gold), var(--gold2));
+    color: #080c12;
+    font-family: 'Outfit', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    letter-spacing: 0.5px;
+    margin-top: 8px;
+  }
+
+  .info-box {
+    background: rgba(201,149,42,0.07);
+    border: 1px solid rgba(201,149,42,0.2);
+    border-radius: 10px;
+    padding: 12px;
+    font-size: 12px;
+    color: var(--text-dim);
+    line-height: 1.6;
+    margin-top: 6px;
+  }
+
+  .info-box strong { color: var(--gold); }
+
+  /* ── HISTORIQUE ── */
+  .historique-panel {
+    padding: 20px 20px 100px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .histo-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 20px;
+    color: var(--gold2);
+    margin-bottom: 16px;
+    letter-spacing: 1px;
+  }
+
+  .histo-item {
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: 12px;
+    padding: 14px;
+    margin-bottom: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    opacity: 0.6;
+  }
+
+  .histo-left {}
+  .histo-name { font-size: 14px; font-weight: 500; margin-bottom: 3px; }
+  .histo-ticker { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--text-dim); }
+  .histo-right { text-align: right; }
+  .histo-achat { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--text-dim); }
+  .histo-badge {
+    display: inline-block;
+    margin-top: 4px;
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-size: 10px;
+    background: rgba(201,149,42,0.15);
+    color: var(--gold);
+    border: 1px solid var(--gold-dim);
+  }
+
+  /* Responsive desktop */
+  @media (min-width: 640px) {
+    header, .tabs, .summary, .cards, .config-panel, .historique-panel { max-width: 480px; margin-left: auto; margin-right: auto; }
+    .summary { margin: 16px auto; }
+    .tabs { padding-top: 16px; }
+    .bottom-nav { max-width: 480px; left: 50%; transform: translateX(-50%); }
+    .toast { bottom: 100px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="logo">
+    <div class="logo-icon">📈</div>
+    <div>
+      <div class="logo-text">TRACKER</div>
+      <div class="logo-sub">SUIVEZ · ATTEIGNEZ · INVESTISSEZ</div>
+    </div>
+  </div>
+  <button class="btn-add" onclick="openModal()" id="btn-add-header">+</button>
+</header>
+
+<!-- TABS -->
+<div class="tabs" id="main-tabs">
+  <button class="tab active" onclick="switchTab('suivi')">Mes actions</button>
+  <button class="tab" onclick="switchTab('historique')">Historique</button>
+  <button class="tab" onclick="switchTab('config')">Config</button>
+</div>
+
+<!-- SUMMARY BAR -->
+<div class="summary" id="summary-bar">
+  <div class="summary-item">
+    <div class="summary-label">Positions</div>
+    <div class="summary-value gold" id="sum-positions">0</div>
+  </div>
+  <div class="summary-divider"></div>
+  <div class="summary-item">
+    <div class="summary-label">Investi</div>
+    <div class="summary-value" id="sum-investi">0 €</div>
+  </div>
+  <div class="summary-divider"></div>
+  <div class="summary-item">
+    <div class="summary-label">Objectif x2</div>
+    <div class="summary-value gold" id="sum-objectif">0 €</div>
+  </div>
+</div>
+
+<!-- PANELS -->
+<div id="panel-suivi">
+  <div class="cards" id="cards-container"></div>
+  <div class="empty" id="empty-state" style="display:none">
+    <div class="empty-icon">📊</div>
+    <div class="empty-title">Aucune position</div>
+    <div class="empty-sub">Appuyez sur + pour ajouter votre première action</div>
+  </div>
+</div>
+
+<div id="panel-historique" style="display:none">
+  <div class="historique-panel">
+    <div class="histo-title">Historique</div>
+    <div id="histo-container"></div>
+    <div id="histo-empty" class="empty" style="display:none">
+      <div class="empty-icon">🏆</div>
+      <div class="empty-title">Aucun objectif atteint</div>
+      <div class="empty-sub">Les actions grisées apparaîtront ici</div>
+    </div>
+  </div>
+</div>
+
+<div id="panel-config" style="display:none">
+  <div class="config-panel">
+    <div class="config-title">Configuration</div>
+
+    <div class="config-card">
+      <div class="config-card-title">📧 Alertes Email</div>
+      <div class="config-field">
+        <label>Votre adresse email (destinataire)</label>
+        <input type="email" id="cfg-email" placeholder="votre@email.com">
+      </div>
+      <div class="info-box">
+        Les alertes sont envoyées automatiquement par <strong>GitHub Actions</strong> à <strong>11h00</strong> et <strong>17h00</strong> chaque jour de semaine.<br><br>
+        Renseignez votre email ici pour que le script sache où envoyer les alertes.
+      </div>
+    </div>
+
+    <div class="config-card">
+      <div class="config-card-title">⚙️ GitHub Actions — Variables</div>
+      <div class="info-box">
+        Ces valeurs sont à renseigner dans les <strong>Secrets</strong> de votre dépôt GitHub.<br>
+        Consultez le fichier <strong>INSTRUCTIONS.md</strong> fourni pour la procédure complète.
+      </div>
+      <br>
+      <div style="font-size:11px; color:var(--text-dim); line-height:1.8;">
+        <code style="color:var(--gold); background:rgba(201,149,42,0.1); padding:2px 6px; border-radius:4px;">GMAIL_USER</code> → votre adresse Gmail<br>
+        <code style="color:var(--gold); background:rgba(201,149,42,0.1); padding:2px 6px; border-radius:4px;">GMAIL_APP_PASSWORD</code> → mot de passe d'application Google<br>
+        <code style="color:var(--gold); background:rgba(201,149,42,0.1); padding:2px 6px; border-radius:4px;">DEST_EMAIL</code> → votre email de réception
+      </div>
+    </div>
+
+    <div class="config-card">
+      <div class="config-card-title">📤 Exporter mes données</div>
+      <div class="info-box" style="margin-bottom:10px;">
+        Exportez votre portefeuille en JSON pour le copier dans GitHub et permettre la vérification automatique des prix.
+      </div>
+      <button class="btn-config-save" onclick="exportPortfolio()" style="background: var(--bg3); border: 1px solid var(--card-border); color: var(--text-dim);">
+        📋 Copier le JSON du portefeuille
+      </button>
+      <button class="btn-config-save" onclick="saveConfig()" style="margin-top:10px;">
+        ✓ Enregistrer la configuration
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL AJOUT/EDIT -->
+<div class="modal-overlay" id="modal-overlay" onclick="closeModalOutside(event)">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="modal-title">Nouvelle position</div>
+
+    <div class="field">
+      <label>Nom personnalisé</label>
+      <input type="text" id="f-name" placeholder="Ex: ETF SP500 Amundi CTO">
+    </div>
+    <div class="field">
+      <label>Ticker (symbole)</label>
+      <input type="text" id="f-ticker" placeholder="Ex: AAPL, TTE, BTC-USD" style="font-family:'DM Mono',monospace; text-transform:uppercase;">
+      <div class="field-hint">Trouvez le ticker sur <a href="https://finance.yahoo.com" target="_blank" style="color:var(--gold)">finance.yahoo.com</a></div>
+    </div>
+    <div class="field">
+      <label>Prix d'achat (€ ou $)</label>
+      <input type="number" id="f-price" placeholder="Ex: 142.50" step="0.01" min="0">
+      <div class="field-hint" id="objectif-preview" style="color:var(--gold); display:none;"></div>
+    </div>
+    <div class="field">
+      <label>Quantité (optionnel)</label>
+      <input type="number" id="f-qty" placeholder="Ex: 10" step="1" min="0">
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal()">Annuler</button>
+      <button class="btn-save" onclick="savePosition()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- BOTTOM NAV -->
+<div class="bottom-nav">
+  <button class="nav-item active" onclick="switchTab('suivi')" id="nav-suivi">
+    <span class="nav-icon">📊</span>
+    <span class="nav-label">Suivi</span>
+  </button>
+  <button class="nav-item" onclick="switchTab('historique')" id="nav-historique">
+    <span class="nav-icon">🏆</span>
+    <span class="nav-label">Historique</span>
+  </button>
+  <button class="nav-item" onclick="switchTab('config')" id="nav-config">
+    <span class="nav-icon">⚙️</span>
+    <span class="nav-label">Config</span>
+  </button>
+</div>
+
+<script>
+// ── STATE ──
+let positions = JSON.parse(localStorage.getItem('tracker_positions') || '[]');
+let config = JSON.parse(localStorage.getItem('tracker_config') || '{}');
+let editingId = null;
+let currentTab = 'suivi';
+
+// ── INIT ──
+document.addEventListener('DOMContentLoaded', () => {
+  loadConfig();
+  renderAll();
+  // Prix simulés au chargement (dans la version GitHub, le script Python s'en charge)
+  updatePrices();
+});
+
+// ── SAVE ──
+function save() {
+  localStorage.setItem('tracker_positions', JSON.stringify(positions));
+}
+
+// ── TABS ──
+function switchTab(tab) {
+  currentTab = tab;
+  ['suivi','historique','config'].forEach(t => {
+    document.getElementById('panel-' + t).style.display = t === tab ? 'block' : 'none';
+    document.getElementById('nav-' + t)?.classList.toggle('active', t === tab);
+  });
+  document.querySelectorAll('.tab').forEach((el, i) => {
+    el.classList.toggle('active', ['suivi','historique','config'][i] === tab);
+  });
+  document.getElementById('btn-add-header').style.display = tab === 'suivi' ? 'flex' : 'none';
+  document.getElementById('summary-bar').style.display = tab === 'suivi' ? 'flex' : 'none';
+  if (tab === 'historique') renderHistorique();
+}
+
+// ── MODAL ──
+function openModal(id = null) {
+  editingId = id;
+  const overlay = document.getElementById('modal-overlay');
+  document.getElementById('modal-title').textContent = id ? 'Modifier la position' : 'Nouvelle position';
+
+  if (id) {
+    const p = positions.find(x => x.id === id);
+    document.getElementById('f-name').value = p.name;
+    document.getElementById('f-ticker').value = p.ticker;
+    document.getElementById('f-price').value = p.buyPrice;
+    document.getElementById('f-qty').value = p.qty || '';
+    updateObjectifPreview();
+  } else {
+    document.getElementById('f-name').value = '';
+    document.getElementById('f-ticker').value = '';
+    document.getElementById('f-price').value = '';
+    document.getElementById('f-qty').value = '';
+    document.getElementById('objectif-preview').style.display = 'none';
+  }
+
+  overlay.classList.add('open');
+  setTimeout(() => document.getElementById('f-name').focus(), 400);
+}
+
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('open');
+  editingId = null;
+}
+
+function closeModalOutside(e) {
+  if (e.target === document.getElementById('modal-overlay')) closeModal();
+}
+
+document.getElementById('f-price').addEventListener('input', updateObjectifPreview);
+
+function updateObjectifPreview() {
+  const val = parseFloat(document.getElementById('f-price').value);
+  const el = document.getElementById('objectif-preview');
+  if (val > 0) {
+    el.textContent = `Objectif x2 : ${(val * 2).toFixed(2)}`;
+    el.style.display = 'block';
+  } else {
+    el.style.display = 'none';
+  }
+}
+
+// ── CRUD ──
+function savePosition() {
+  const name = document.getElementById('f-name').value.trim();
+  const ticker = document.getElementById('f-ticker').value.trim().toUpperCase();
+  const buyPrice = parseFloat(document.getElementById('f-price').value);
+  const qty = parseFloat(document.getElementById('f-qty').value) || null;
+
+  if (!name || !ticker || !buyPrice || buyPrice <= 0) {
+    showToast('⚠️ Veuillez remplir tous les champs obligatoires');
+    return;
+  }
+
+  if (editingId) {
+    const p = positions.find(x => x.id === editingId);
+    p.name = name;
+    p.ticker = ticker;
+    p.buyPrice = buyPrice;
+    p.qty = qty;
+    p.objectif = buyPrice * 2;
+    showToast('✓ Position modifiée');
+  } else {
+    positions.push({
+      id: Date.now().toString(),
+      name, ticker, buyPrice, qty,
+      objectif: buyPrice * 2,
+      currentPrice: null,
+      grised: false,
+      alertSent: false,
+      addedAt: new Date().toISOString()
+    });
+    showToast('✓ Position ajoutée');
+  }
+
+  save();
+  closeModal();
+  renderAll();
+}
+
+function deletePosition(id) {
+  if (!confirm('Supprimer cette position ?')) return;
+  positions = positions.filter(x => x.id !== id);
+  save();
+  renderAll();
+  showToast('🗑 Position supprimée');
+}
+
+function toggleGrise(id) {
+  const p = positions.find(x => x.id === id);
+  p.grised = !p.grised;
+  save();
+  renderAll();
+  showToast(p.grised ? '✓ Objectif marqué atteint' : '↩ Position réactivée');
+}
+
+// ── RENDER ──
+function renderAll() {
+  renderCards();
+  renderSummary();
+}
+
+function renderCards() {
+  const container = document.getElementById('cards-container');
+  const empty = document.getElementById('empty-state');
+  const active = positions.filter(p => !p.grised);
+
+  if (active.length === 0) {
+    container.innerHTML = '';
+    empty.style.display = 'block';
+    return;
+  }
+
+  empty.style.display = 'none';
+  container.innerHTML = active.map((p, i) => cardHTML(p, i)).join('');
+}
+
+function cardHTML(p, i) {
+  const current = p.currentPrice || p.buyPrice;
+  const obj = p.buyPrice * 2;
+  const progress = Math.min((current / obj) * 100, 100);
+  const pct = ((current - p.buyPrice) / p.buyPrice * 100);
+  const pctStr = (pct >= 0 ? '+' : '') + pct.toFixed(2) + '%';
+  const changeClass = pct > 0 ? 'up' : pct < 0 ? 'down' : 'neutral';
+  const progressColor = progress < 40 ? '#ef4444' : progress < 70 ? '#f97316' : progress < 90 ? '#f0b429' : '#22c55e';
+  const tickerShort = p.ticker.length > 5 ? p.ticker.substring(0,5) : p.ticker;
+
+  const investi = p.qty ? (p.buyPrice * p.qty).toFixed(2) : null;
+
+  return `
+  <div class="card" id="card-${p.id}" style="animation-delay:${i * 0.07}s">
+    <div class="card-status-badge">✓ ATTEINT</div>
+    <div class="card-header">
+      <div class="card-left">
+        <div class="ticker-badge">${tickerShort}</div>
+        <div>
+          <div class="card-name">${escHtml(p.name)}</div>
+          <div class="card-ticker">${p.ticker}</div>
+        </div>
+      </div>
+      <div class="card-right">
+        <div class="card-price">${formatPrice(current)}</div>
+        <div class="card-change ${changeClass}">${pctStr}</div>
+      </div>
+    </div>
+
+    <div class="card-progress-row">
+      <div class="card-obj-label">Objectif x2</div>
+      <div class="card-obj-value">${formatPrice(obj)} — ${progress.toFixed(1)}%</div>
+    </div>
+    <div class="progress-bar-bg">
+      <div class="progress-bar-fill" style="width:${progress}%; background:${progressColor};"></div>
+    </div>
+
+    <div class="card-info-row">
+      <div class="info-item">
+        <div class="info-label">Prix d'achat</div>
+        <div class="info-value">${formatPrice(p.buyPrice)}</div>
+      </div>
+      ${investi ? `<div class="info-item">
+        <div class="info-label">Investi</div>
+        <div class="info-value">${formatPrice(parseFloat(investi))}</div>
+      </div>` : ''}
+      <div class="info-item">
+        <div class="info-label">Quantité</div>
+        <div class="info-value">${p.qty ? p.qty : '—'}</div>
+      </div>
+    </div>
+
+    <div class="card-actions">
+      <button class="btn-sm btn-edit" onclick="openModal('${p.id}')">✏️ Modifier</button>
+      <button class="btn-sm btn-done" onclick="toggleGrise('${p.id}')">✓ Objectif atteint</button>
+      <button class="btn-sm btn-delete" onclick="deletePosition('${p.id}')">🗑</button>
+    </div>
+  </div>`;
+}
+
+function renderSummary() {
+  const active = positions.filter(p => !p.grised);
+  const totalInvesti = active.reduce((s, p) => s + (p.qty ? p.buyPrice * p.qty : p.buyPrice), 0);
+  const totalObj = active.reduce((s, p) => s + (p.qty ? p.buyPrice * 2 * p.qty : p.buyPrice * 2), 0);
+
+  document.getElementById('sum-positions').textContent = active.length;
+  document.getElementById('sum-investi').textContent = formatPrice(totalInvesti);
+  document.getElementById('sum-objectif').textContent = formatPrice(totalObj);
+}
+
+function renderHistorique() {
+  const grised = positions.filter(p => p.grised);
+  const container = document.getElementById('histo-container');
+  const empty = document.getElementById('histo-empty');
+
+  if (grised.length === 0) {
+    container.innerHTML = '';
+    empty.style.display = 'block';
+    return;
+  }
+
+  empty.style.display = 'none';
+  container.innerHTML = grised.map(p => `
+    <div class="histo-item">
+      <div class="histo-left">
+        <div class="histo-name">${escHtml(p.name)}</div>
+        <div class="histo-ticker">${p.ticker}</div>
+      </div>
+      <div class="histo-right">
+        <div class="histo-achat">Achat: ${formatPrice(p.buyPrice)}</div>
+        <div class="histo-badge">✓ Objectif atteint</div>
+        <br>
+        <button class="btn-sm btn-reactivate" style="margin-top:6px;font-size:10px;" onclick="toggleGrise('${p.id}')">↩ Réactiver</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ── PRIX ──
+async function updatePrices() {
+  const active = positions.filter(p => !p.grised && p.ticker);
+  if (active.length === 0) return;
+
+  for (const p of active) {
+    try {
+      const price = await fetchPrice(p.ticker);
+      if (price) {
+        p.currentPrice = price;
+      }
+    } catch(e) {
+      // silencieux
+    }
+  }
+  save();
+  renderAll();
+}
+
+async function fetchPrice(ticker) {
+  // Yahoo Finance via proxy CORS gratuit
+  try {
+    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?interval=1d&range=1d`;
+    const r = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);
+    const data = await r.json();
+    const parsed = JSON.parse(data.contents);
+    const price = parsed?.chart?.result?.[0]?.meta?.regularMarketPrice;
+    return price || null;
+  } catch(e) {
+    return null;
+  }
+}
+
+// ── CONFIG ──
+function loadConfig() {
+  if (config.email) document.getElementById('cfg-email').value = config.email;
+}
+
+function saveConfig() {
+  config.email = document.getElementById('cfg-email').value.trim();
+  localStorage.setItem('tracker_config', JSON.stringify(config));
+  showToast('✓ Configuration enregistrée');
+}
+
+function exportPortfolio() {
+  const data = positions.filter(p => !p.grised).map(p => ({
+    name: p.name,
+    ticker: p.ticker,
+    buyPrice: p.buyPrice,
+    objectif: p.buyPrice * 2,
+    qty: p.qty
+  }));
+  const json = JSON.stringify(data, null, 2);
+  navigator.clipboard.writeText(json).then(() => {
+    showToast('📋 JSON copié dans le presse-papier !');
+  }).catch(() => {
+    prompt('Copiez ce JSON :', json);
+  });
+}
+
+// ── UTILS ──
+function formatPrice(v) {
+  if (!v && v !== 0) return '—';
+  return v.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+}
+
+function escHtml(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+</script>
+</body>
+</html>
